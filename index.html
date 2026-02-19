@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Deepfake Image Detection</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Segoe UI", sans-serif;
+            background: linear-gradient(135deg, #0f172a, #020617);
+            color: #e5e7eb;
+        }
+
+        h1 {
+            text-align: center;
+            padding: 20px;
+            font-size: 28px;
+        }
+
+        .main {
+            display: flex;
+            gap: 30px;
+            padding: 30px;
+            align-items: flex-start;
+        }
+
+        .panel {
+            background: #1e293b;
+            border-radius: 15px;
+            padding: 25px;
+            flex: 1;
+            min-height: 520px;
+        }
+
+        /* ---------- LEFT PANEL ---------- */
+
+        .workflow-box {
+            background: linear-gradient(145deg, #020617, #020617);
+            padding: 18px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #cbd5f5;
+        }
+
+        .workflow-box ul {
+            padding-left: 18px;
+            margin-top: 10px;
+        }
+
+        .upload-box {
+            border: 2px dashed #475569;
+            border-radius: 12px;
+            padding: 35px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .upload-box p {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .hint {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        input[type=file] {
+            margin-top: 12px;
+        }
+
+        .detect-btn {
+            background: #f97316;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 10px;
+            font-size: 16px;
+            color: white;
+            cursor: pointer;
+        }
+
+        .status {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #22c55e;
+        }
+
+        /* ---------- RIGHT PANEL ---------- */
+
+        .image-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .preview-img {
+            max-width: 100%;
+            max-height: 300px;   /* 🔥 KEY FIX */
+            border-radius: 12px;
+            object-fit: contain;
+            background: #020617;
+            padding: 10px;
+        }
+
+        .result-box {
+            display: flex;
+            gap: 20px;
+        }
+
+        .card {
+            background: #020617;
+            padding: 18px;
+            border-radius: 12px;
+            flex: 1;
+            text-align: center;
+        }
+
+        .label {
+            font-size: 14px;
+            color: #94a3b8;
+        }
+
+        .value {
+            font-size: 22px;
+            margin-top: 6px;
+            color: #22c55e;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>🧠 Deepfake Image Detection</h1>
+
+<div class="main">
+
+    <!-- LEFT PANEL -->
+    <div class="panel">
+        <h3>Input Image</h3>
+
+        <div class="workflow-box">
+            <strong>Workflow Overview</strong>
+            <ul>
+                <li>Upload a facial image</li>
+                <li>CNN extracts deep visual features</li>
+                <li>XGBoost classifier predicts authenticity</li>
+            </ul>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data">
+            <div class="upload-box">
+                <p>Click or drag & drop an image</p>
+                <span class="hint">Supported formats: JPG, PNG</span><br>
+                <input type="file" name="image" required>
+            </div>
+
+            <button class="detect-btn" type="submit">Detect</button>
+        </form>
+
+        {% if image_data %}
+            <div class="status">✔ Image uploaded successfully</div>
+        {% endif %}
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="panel">
+        <h3>Detection Results</h3>
+
+        {% if image_data %}
+            <div class="image-wrapper">
+                <img class="preview-img" src="data:image/png;base64,{{ image_data }}">
+            </div>
+        {% endif %}
+
+        {% if result %}
+            <div class="result-box">
+                <div class="card">
+                    <div class="label">Prediction</div>
+                    <div class="value">{{ result }}</div>
+                </div>
+
+                <div class="card">
+                    <div class="label">Confidence</div>
+                    <div class="value">{{ confidence }}%</div>
+                </div>
+
+                <div class="card">
+                    <div class="label">Time</div>
+                    <div class="value">{{ processing_time }} ms</div>
+                </div>
+            </div>
+        {% else %}
+            <p>No image processed yet.</p>
+        {% endif %}
+    </div>
+
+</div>
+
+</body>
+</html>
