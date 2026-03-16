@@ -1,0 +1,19 @@
+[project]
+name = "deepfake-app"
+version = "0.1.0"
+description = "Deepfake image detection web app"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "Flask==3.1.2",
+    "gunicorn==23.0.0",
+    "numpy==1.26.4",
+    "joblib==1.5.3",
+    "Pillow==11.3.0",
+    "scikit-learn==1.5.2",
+    "xgboost==2.1.1",
+    "tensorflow-cpu==2.16.2",
+]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
