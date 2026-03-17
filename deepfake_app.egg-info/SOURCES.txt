@@ -1,0 +1,9 @@
+README.md
+pyproject.toml
+api/__init__.py
+api/index.py
+deepfake_app.egg-info/PKG-INFO
+deepfake_app.egg-info/SOURCES.txt
+deepfake_app.egg-info/dependency_links.txt
+deepfake_app.egg-info/requires.txt
+deepfake_app.egg-info/top_level.txt
