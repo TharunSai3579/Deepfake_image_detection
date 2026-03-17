@@ -8,7 +8,7 @@ os.chdir(ROOT_DIR)
 
 from flask import Flask, render_template, request
 import numpy as np
-import joblib
+import xgboost as xgb
 import time
 from PIL import Image
 from ai_edge_litert.interpreter import Interpreter
@@ -17,9 +17,12 @@ import io
 
 app = Flask(__name__, template_folder=os.path.join(ROOT_DIR, "templates"))
 
-# Load model & scaler
-xgb_model = joblib.load(os.path.join(ROOT_DIR, "xgb_model.pkl"))
-scaler = joblib.load(os.path.join(ROOT_DIR, "scaler.pkl"))
+# Load model & scaler parameters without pulling in scikit-learn at runtime
+xgb_model = xgb.Booster()
+xgb_model.load_model(os.path.join(ROOT_DIR, "xgb_model.json"))
+_scaler_params = np.load(os.path.join(ROOT_DIR, "scaler_params.npz"))
+_scaler_mean = _scaler_params["mean"]
+_scaler_scale = _scaler_params["scale"]
 
 # Feature extractor (TFLite)
 IMG_SIZE = 128
@@ -37,6 +40,16 @@ def extract_features(image):
     interpreter.invoke()
     return interpreter.get_tensor(_output_details[0]["index"])
 
+
+def scale_features(features):
+    return (features - _scaler_mean) / _scaler_scale
+
+
+def predict_proba(features):
+    # Booster.predict returns positive-class probability for binary models.
+    pos_prob = float(xgb_model.predict(xgb.DMatrix(features))[0])
+    return np.array([1.0 - pos_prob, pos_prob], dtype=np.float32)
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     result = confidence = processing_time = image_data = None
@@ -52,9 +65,9 @@ def index():
         image_data = base64.b64encode(buffered.getvalue()).decode()
 
         features = extract_features(image)
-        features = scaler.transform(features)
+        features = scale_features(features)
 
-        prob = xgb_model.predict_proba(features)[0]
+        prob = predict_proba(features)
         prediction = np.argmax(prob)
 
         result = "Fake" if prediction == 1 else "Real"
