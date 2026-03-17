@@ -6,16 +6,17 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT_DIR)
 os.chdir(ROOT_DIR)
 
-from flask import Flask, render_template, request
+from flask import Flask, request, jsonify, send_from_directory
 import numpy as np
 import xgboost as xgb
 import time
 from PIL import Image
 from ai_edge_litert.interpreter import Interpreter
-import base64
 import io
 
-app = Flask(__name__, template_folder=os.path.join(ROOT_DIR, "templates"))
+BUILD_DIR = os.path.join(ROOT_DIR, "build")
+
+app = Flask(__name__)
 
 # Load model & scaler parameters without pulling in scikit-learn at runtime
 xgb_model = xgb.Booster()
@@ -50,37 +51,43 @@ def predict_proba(features):
     pos_prob = float(xgb_model.predict(xgb.DMatrix(features))[0])
     return np.array([1.0 - pos_prob, pos_prob], dtype=np.float32)
 
-@app.route("/", methods=["GET", "POST"])
-def index():
-    result = confidence = processing_time = image_data = None
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
+def serve_frontend(path):
+    """Serve the React/static build folder. Fall back to index.html for SPA routing."""
+    if path and os.path.exists(os.path.join(BUILD_DIR, path)):
+        return send_from_directory(BUILD_DIR, path)
+    return send_from_directory(BUILD_DIR, "index.html")
 
-    if request.method == "POST":
-        start = time.time()
 
-        file = request.files["image"]
+@app.route("/predict", methods=["POST"])
+def predict():
+    if "image" not in request.files:
+        return jsonify({"error": "No image uploaded"}), 400
+
+    start = time.time()
+
+    file = request.files["image"]
+    try:
         image = Image.open(file).convert("RGB")
+    except Exception:
+        return jsonify({"error": "Invalid image file"}), 400
 
-        buffered = io.BytesIO()
-        image.save(buffered, format="PNG")
-        image_data = base64.b64encode(buffered.getvalue()).decode()
+    features = extract_features(image)
+    features = scale_features(features)
 
-        features = extract_features(image)
-        features = scale_features(features)
+    prob = predict_proba(features)
+    prediction = int(np.argmax(prob))
 
-        prob = predict_proba(features)
-        prediction = np.argmax(prob)
+    result = "Fake" if prediction == 1 else "Real"
+    confidence = round(float(prob[prediction]) * 100, 2)
+    processing_time = round((time.time() - start) * 1000, 2)
 
-        result = "Fake" if prediction == 1 else "Real"
-        confidence = round(float(prob[prediction]) * 100, 2)
-        processing_time = round((time.time() - start) * 1000, 2)
-
-    return render_template(
-        "index.html",
-        result=result,
-        confidence=confidence,
-        processing_time=processing_time,
-        image_data=image_data
-    )
+    return jsonify({
+        "result": result,
+        "confidence": confidence,
+        "processing_time": processing_time,
+    })
 
 if __name__ == "__main__":
     app.run(debug=True)
