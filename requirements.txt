@@ -5,4 +5,4 @@ joblib==1.5.3
 Pillow==11.3.0
 scikit-learn==1.5.2
 xgboost==2.1.1
-tensorflow-cpu==2.16.2
+tflite-runtime==2.14.0

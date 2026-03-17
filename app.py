@@ -3,9 +3,7 @@ import numpy as np
 import joblib
 import time
 from PIL import Image
-import tensorflow as tf
-from tensorflow.keras.applications import MobileNetV2
-from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+import tflite_runtime.interpreter as tflite
 import base64
 import io
 
@@ -15,21 +13,21 @@ app = Flask(__name__)
 xgb_model = joblib.load("xgb_model.pkl")
 scaler = joblib.load("scaler.pkl")
 
-# Feature extractor
+# Feature extractor (TFLite)
 IMG_SIZE = 128
-feature_extractor = MobileNetV2(
-    weights="imagenet",
-    include_top=False,
-    pooling="avg",
-    input_shape=(IMG_SIZE, IMG_SIZE, 3)
-)
+interpreter = tflite.Interpreter(model_path="mobilenetv2_feature_extractor.tflite")
+interpreter.allocate_tensors()
+_input_details = interpreter.get_input_details()
+_output_details = interpreter.get_output_details()
 
 def extract_features(image):
     image = image.resize((IMG_SIZE, IMG_SIZE))
-    image = np.array(image)
-    image = preprocess_input(image)
+    image = np.array(image, dtype=np.float32)
+    image = (image / 127.5) - 1.0  # MobileNetV2 preprocess: scale to [-1, 1]
     image = np.expand_dims(image, axis=0)
-    return feature_extractor.predict(image)
+    interpreter.set_tensor(_input_details[0]["index"], image)
+    interpreter.invoke()
+    return interpreter.get_tensor(_output_details[0]["index"])
 
 @app.route("/", methods=["GET", "POST"])
 def index():
