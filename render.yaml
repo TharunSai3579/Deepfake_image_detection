@@ -8,6 +8,6 @@ services:
     healthCheckPath: /
     envVars:
       - key: PYTHON_VERSION
-        value: 3.10.14
+        value: 3.12.12
       - key: TF_CPP_MIN_LOG_LEVEL
         value: "2"
