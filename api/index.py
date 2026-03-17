@@ -6,7 +6,7 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT_DIR)
 os.chdir(ROOT_DIR)
 
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, send_file
 import numpy as np
 import xgboost as xgb
 import time
@@ -14,6 +14,8 @@ from PIL import Image
 from ai_edge_litert.interpreter import Interpreter
 
 BUILD_DIR = os.path.join(ROOT_DIR, "build")
+ROOT_INDEX_FILE = os.path.join(ROOT_DIR, "index.html")
+BUILD_INDEX_FILE = os.path.join(BUILD_DIR, "index.html")
 
 app = Flask(__name__, static_folder=None)
 
@@ -53,10 +55,23 @@ def predict_proba(features):
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def serve_frontend(path):
-    """Serve the React/static build folder. Fall back to index.html for SPA routing."""
-    if path and os.path.exists(os.path.join(BUILD_DIR, path)):
-        return send_from_directory(BUILD_DIR, path)
-    return send_from_directory(BUILD_DIR, "index.html")
+    """Serve frontend from build/ or root index.html in a single deployment unit."""
+    if path:
+        build_path = os.path.join(BUILD_DIR, path)
+        if os.path.isfile(build_path):
+            return send_from_directory(BUILD_DIR, path)
+
+        # Support setups where index.html is at repo root with adjacent assets.
+        root_path = os.path.join(ROOT_DIR, path)
+        if os.path.isfile(root_path):
+            return send_from_directory(ROOT_DIR, path)
+
+    if os.path.isfile(ROOT_INDEX_FILE):
+        return send_file(ROOT_INDEX_FILE)
+    if os.path.isfile(BUILD_INDEX_FILE):
+        return send_file(BUILD_INDEX_FILE)
+
+    return jsonify({"error": "Frontend index.html not found in root or build directory"}), 500
 
 
 @app.route("/predict", methods=["POST"])

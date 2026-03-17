@@ -5,7 +5,7 @@
       "use": "@vercel/python",
       "config": {
         "maxLambdaSize": "250mb",
-        "includeFiles": ["build/**", "xgb_model.json", "scaler_params.npz", "mobilenetv2_feature_extractor.tflite"]
+        "includeFiles": ["index.html", "build/**", "xgb_model.json", "scaler_params.npz", "mobilenetv2_feature_extractor.tflite"]
       }
     }
   ],
