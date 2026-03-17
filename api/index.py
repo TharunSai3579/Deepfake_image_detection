@@ -12,11 +12,10 @@ import xgboost as xgb
 import time
 from PIL import Image
 from ai_edge_litert.interpreter import Interpreter
-import io
 
 BUILD_DIR = os.path.join(ROOT_DIR, "build")
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder=None)
 
 # Load model & scaler parameters without pulling in scikit-learn at runtime
 xgb_model = xgb.Booster()
