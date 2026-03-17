@@ -3,7 +3,7 @@ import numpy as np
 import joblib
 import time
 from PIL import Image
-import tflite_runtime.interpreter as tflite
+from ai_edge_litert.interpreter import Interpreter
 import base64
 import io
 
@@ -15,7 +15,7 @@ scaler = joblib.load("scaler.pkl")
 
 # Feature extractor (TFLite)
 IMG_SIZE = 128
-interpreter = tflite.Interpreter(model_path="mobilenetv2_feature_extractor.tflite")
+interpreter = Interpreter(model_path="mobilenetv2_feature_extractor.tflite")
 interpreter.allocate_tensors()
 _input_details = interpreter.get_input_details()
 _output_details = interpreter.get_output_details()
