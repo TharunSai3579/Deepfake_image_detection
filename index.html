@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <title>Deepfake Image Detection</title>
-
     <style>
         body {
             margin: 0;
@@ -32,8 +31,6 @@
             flex: 1;
             min-height: 520px;
         }
-
-        /* ---------- LEFT PANEL ---------- */
 
         .workflow-box {
             background: linear-gradient(145deg, #020617, #020617);
@@ -81,13 +78,22 @@
             cursor: pointer;
         }
 
+        .detect-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
         .status {
             margin-top: 15px;
             font-size: 14px;
             color: #22c55e;
         }
 
-        /* ---------- RIGHT PANEL ---------- */
+        .error {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #ef4444;
+        }
 
         .image-wrapper {
             display: flex;
@@ -97,7 +103,7 @@
 
         .preview-img {
             max-width: 100%;
-            max-height: 300px;   /* 🔥 KEY FIX */
+            max-height: 300px;
             border-radius: 12px;
             object-fit: contain;
             background: #020617;
@@ -128,9 +134,15 @@
             color: #22c55e;
             font-weight: bold;
         }
+
+        .spinner {
+            display: none;
+            margin-top: 15px;
+            font-size: 14px;
+            color: #94a3b8;
+        }
     </style>
 </head>
-
 <body>
 
 <h1>🧠 Deepfake Image Detection</h1>
@@ -150,54 +162,105 @@
             </ul>
         </div>
 
-        <form method="POST" enctype="multipart/form-data">
-            <div class="upload-box">
-                <p>Click or drag & drop an image</p>
-                <span class="hint">Supported formats: JPG, PNG</span><br>
-                <input type="file" name="image" required>
-            </div>
+        <div class="upload-box">
+            <p>Click or drag &amp; drop an image</p>
+            <span class="hint">Supported formats: JPG, PNG</span><br>
+            <input type="file" id="imageInput" name="image" accept="image/*" required>
+        </div>
 
-            <button class="detect-btn" type="submit">Detect</button>
-        </form>
+        <button class="detect-btn" id="detectBtn" onclick="detect()">Detect</button>
 
-        {% if image_data %}
-            <div class="status">✔ Image uploaded successfully</div>
-        {% endif %}
+        <div class="spinner" id="spinner">⏳ Processing...</div>
+        <div class="status" id="statusMsg" style="display:none">✔ Image uploaded successfully</div>
+        <div class="error" id="errorMsg" style="display:none"></div>
     </div>
 
     <!-- RIGHT PANEL -->
     <div class="panel">
         <h3>Detection Results</h3>
 
-        {% if image_data %}
-            <div class="image-wrapper">
-                <img class="preview-img" src="data:image/png;base64,{{ image_data }}">
-            </div>
-        {% endif %}
+        <div class="image-wrapper" id="imageWrapper" style="display:none">
+            <img class="preview-img" id="previewImg" src="" alt="Preview">
+        </div>
 
-        {% if result %}
-            <div class="result-box">
-                <div class="card">
-                    <div class="label">Prediction</div>
-                    <div class="value">{{ result }}</div>
-                </div>
-
-                <div class="card">
-                    <div class="label">Confidence</div>
-                    <div class="value">{{ confidence }}%</div>
-                </div>
-
-                <div class="card">
-                    <div class="label">Time</div>
-                    <div class="value">{{ processing_time }} ms</div>
-                </div>
-            </div>
-        {% else %}
+        <div id="resultsArea">
             <p>No image processed yet.</p>
-        {% endif %}
+        </div>
     </div>
 
 </div>
+
+<script>
+    async function detect() {
+        const input = document.getElementById('imageInput');
+        const btn = document.getElementById('detectBtn');
+        const spinner = document.getElementById('spinner');
+        const statusMsg = document.getElementById('statusMsg');
+        const errorMsg = document.getElementById('errorMsg');
+
+        if (!input.files || !input.files[0]) {
+            errorMsg.textContent = 'Please select an image first.';
+            errorMsg.style.display = 'block';
+            return;
+        }
+
+        errorMsg.style.display = 'none';
+        statusMsg.style.display = 'none';
+        btn.disabled = true;
+        spinner.style.display = 'block';
+
+        // Show local preview immediately
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = document.getElementById('previewImg');
+            img.src = e.target.result;
+            document.getElementById('imageWrapper').style.display = 'flex';
+        };
+        reader.readAsDataURL(file);
+
+        try {
+            const formData = new FormData();
+            formData.append('image', file);
+
+            const response = await fetch('/predict', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({ error: 'Server error' }));
+                throw new Error(err.error || 'Server error');
+            }
+
+            const data = await response.json();
+
+            statusMsg.style.display = 'block';
+            document.getElementById('resultsArea').innerHTML = `
+                <div class="result-box">
+                    <div class="card">
+                        <div class="label">Prediction</div>
+                        <div class="value">${data.result}</div>
+                    </div>
+                    <div class="card">
+                        <div class="label">Confidence</div>
+                        <div class="value">${data.confidence}%</div>
+                    </div>
+                    <div class="card">
+                        <div class="label">Time</div>
+                        <div class="value">${data.processing_time} ms</div>
+                    </div>
+                </div>
+            `;
+        } catch (err) {
+            errorMsg.textContent = '❌ ' + err.message;
+            errorMsg.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            spinner.style.display = 'none';
+        }
+    }
+</script>
 
 </body>
 </html>

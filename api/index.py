@@ -66,10 +66,10 @@ def serve_frontend(path):
         if os.path.isfile(root_path):
             return send_from_directory(ROOT_DIR, path)
 
-    if os.path.isfile(ROOT_INDEX_FILE):
-        return send_file(ROOT_INDEX_FILE)
     if os.path.isfile(BUILD_INDEX_FILE):
         return send_file(BUILD_INDEX_FILE)
+    if os.path.isfile(ROOT_INDEX_FILE):
+        return send_file(ROOT_INDEX_FILE)
 
     return jsonify({"error": "Frontend index.html not found in root or build directory"}), 500
 
